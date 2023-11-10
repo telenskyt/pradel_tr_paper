@@ -9,16 +9,19 @@ model/ - basic and extended model in BUGS language
 
 Install instructions
 
-1. Install either Nimble (https://r-nimble.org/) or JAGS (along with R package 'runjags')
+1. Install either Nimble (https://r-nimble.org/) or [JAGS](https://sourceforge.net/projects/mcmc-jags) (along with the R package 'runjags')
 2. Install R packages:
 
-install.packages("coda", "reshape2", "stringr")
+```r
+install.packages(c("coda", "reshape2", "stringr"))
+```
 
 3. Install the talonplot R package - either from a binary, if available, or from the source repository:
 
+```r
 require(devtools)
 install_github("https://github.com/telenskyt/talonplot/")
-
+```
 
 This work is available under [CC-BY license](https://creativecommons.org/licenses/by/4.0/deed.en). If you reuse these scripts for your work, please cite our paper.
 
