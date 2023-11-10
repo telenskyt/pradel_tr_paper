@@ -1,3 +1,7 @@
+obsolete
+
+.cd.Rdata
+
 # History files
 .Rhistory
 .Rapp.history
