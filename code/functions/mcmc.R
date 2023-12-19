@@ -38,3 +38,16 @@ mcmcsum <- function (mc, ...)
 
 	list(summ = s4, mpsrf = psrf$mpsrf)
 }
+
+
+
+# convert matrix back to mcmc.list!
+# matrix must have been created by as.matrix(outRJ$mcmc, chains = TRUE) !!!  Viz ?as.matrix.mcmc (lze i getAnywhere(as.matrix.mcmc))
+# it is useful if you want to calculate chain statistics (psrf) or traceplots for some ex-post derived variables
+matrix2mcmc <- function (mt)
+{
+	require(coda)
+	stopifnot('CHAIN' %in% colnames(mt))
+	nchains <- max(mt[,'CHAIN'])
+	mcmc.list(lapply(1:nchains, function (x) mcmc(mt[mt[,'CHAIN'] == x, setdiff(colnames(mt), c("CHAIN","ITER"))])))
+}
