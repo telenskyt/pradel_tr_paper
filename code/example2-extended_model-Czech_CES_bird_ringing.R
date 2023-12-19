@@ -1,19 +1,23 @@
 #######
 #
 # Extension of the Pradel (1996) model for transients and multiple sites with different temporal coverage
+# 
+# Code for Chapter 6 | Case study: Constant Effort Sites mist-netting scheme in the Czech Republic
+# of the manuscript: 
+#
+# Telenský, T., Storch, D., Klvaňa, P., Reif, J. Extension of Pradel capture-recapture survival-recruitment model accounting for transients. 
+#	Methods in Ecology and Evolution. https://doi.org/10.1111/2041-210X.14262
 #
 # THIS IS THE MAIN SCRIPT TO RUN THE MODEL, START HERE
 
 library(coda)
 
-fast_model_run <- TRUE # very brief model run (few iterations) just for testing
+fast_model_run <- FALSE # very brief model run (few iterations) just for testing
 run_parallel <- TRUE # disable only for debugging
 
 source("../data/ces-data.R", chdir = TRUE) # load CES data
 
-source("functions/ces-data-prepare.R") # functions to prepare CES data for the model
-
-source("functions/nimble-wrapper.R") # functions to run Nimble
+source("functions/data-prepare.R") # functions to prepare data for the model
 
 ### prepare the data
 
@@ -21,12 +25,27 @@ YRS <- min(ces$year):max(ces$year) # year span
 #sp_id <- 12510 # Euring species id, 12510 = Acrocephalus scirpaceus
 sp_id <- 14640 # Euring species id, 14640 = Parus major
 
+
+ces$site <- ces$site_ces # 
+ces$time <- ces$year # use year as temporal occasion
+
+# build global table of visits (long format)
+visits <- visits(ces[ces$year %in% YRS,])
+
 # process the individual captures and prepare the data in the required format:
-data <- prepare_data(ces, sp_id, YRS)
+filter <- ces$euring == sp_id & ces$age >= 4 & ces$year %in% YRS # filter adults of given species
+
+data <- prepare_data(
+	cap = ces[filter,], 
+	visits = visits,
+	known_resid_first_cap = function(cap_sel) recaptured_on_first_occasion(cap_sel, visit.col = "visit")
+)
 
 ### run the model
 
 source("../model/model-pradel_with_transients-extended.nimble.R") # run the extended model, using Nimble
+
+save(out, file = paste0("model-", sp_id, ".Rdata"))
 
 ### post-hoc calculation of the derived parameters. Performed on the MCMC samples
 ### to ensure proper propagation of uncertainty of the primary model parameters to these derived quantities
@@ -34,7 +53,7 @@ source("../model/model-pradel_with_transients-extended.nimble.R") # run the exte
 
 source("functions/mcmc.R")
 
-mcmcsum(out$mcmc) # summary of the MCMC chains
+mcmcsum(out$mcmc) # summary of the MCMC chains of the primary parameters
 
 mc <- as.mcmc.list(out$mcmc)
 mt <- as.matrix(mc, chains = TRUE, iters = TRUE)
@@ -67,6 +86,10 @@ for (i in 2:n.occasions) {
 	pop.idx[,i] <- pop.idx[,i-1] * lambda[,i-1]
 }
 pop.idx.sum <- as.data.frame(cbind(Year = YRS, t(apply(pop.idx, 2, function (x) { c(Mean = mean(x), quantile(x, c(0.025, 0.975))) }))))
+
+# now create a summary of MCMC chains of all parameters, including the derived ones!
+mc <- matrix2mcmc(mt)
+mcmcsum(mc)
 
 ### As an example of a simple follow-up analysis with proper propagation of uncertainty, we calculate correlations
 ### of the demographic rates and density (population index). The follow-up analysis (here, correlation) is performed
@@ -139,8 +162,7 @@ talon_plot(
 	CI_transform = FALSE,
 	main = "Parus major",
 	big_font = big_font,
-	plot.samples = TRUE,
-	col.samples = "black"
+	plot.samples = TRUE
 )
 
 
