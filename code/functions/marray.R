@@ -1,6 +1,6 @@
 ######################################################
 # Functions to transform capture histories to m-arrays
-#
+# 
 # Based on code from BPA 2012 (Kéry, M., & Schaub, M. (2012). Bayesian Population Analysis using WinBUGS. Elsevier.)
 
 
@@ -15,7 +15,9 @@
 #			at occasion t+1 (so recaptures within the same occasion are not counted here)
 # mar[i, k] is number of animals first captured at occasion i and never recaptured again
 
-marray <- function(CH) {
+marray <- function(CH) 
+{
+	stopifnot(all(CH %in% c(0, 1)) && all(!is.na(CH))) # CH cannot contain NAs here, only 0s and 1s
 	nind <- nrow(CH)
 	n.occasions <- ncol(CH)
 	m.array <- matrix(data = 0, ncol = n.occasions+1, nrow = n.occasions)
@@ -42,16 +44,27 @@ marray <- function(CH) {
 	return(out)
 }
 
-# marray_multistage()
-#
+
+# @description
 # Returns a pair of m-arrays F, R (F - for animals captured for the 1st time; R - for animals captured for 2nd and more-th time) 
-#	for the purpose of transience
+#	for the purpose of accounting for transience. It is equivalent to the two age-class structure (F ~ juv, R ~ ad)
 #
 # Based on code from BPA 2012, chapter 7.10.3 (Kéry, M., & Schaub, M. (2012). Bayesian Population Analysis using WinBUGS. Elsevier.)
-# 	  - there it is as an m-array with two age classes  - I adapted it for handling transience
-# 	  analogy: juv -> F, then go to ad -> R; first captured as adults don't exist
-
-# Returns: list with F, R, two m-arrays:
+# 	  - there it is as an m-array with two age classes  - I adapted it for handling transience.
+# 	  Analogy: juv -> F, then go to ad -> R; first captured as adults don't exist.
+#
+# @param CH capture history - a matrix - rows ~ individuals, columns ~ temporal occasions
+#
+# @param known.resid.first.cap If the information on known residency status of newly captured individuals is to be used by the model (Model extension 2 in the manuscript), 
+#		 this should be a boolean vector that for each individual denotes whether 
+# 	it was a confirmed resident during the occasion of the first capture (e.g. by capturing it during multiple sub-occasions within the occasion of the first capture, or by direct cues confirming residency).
+#	The default NULL value denotes that no such information should be used.
+#		(For more details see `Model extension 2: Confirmation of residency status within the first capture occasion` in the paper
+#		 Telenský, T., Storch, D., Klvaňa, P., Reif, J. Extension of Pradel capture-recapture survival-recruitment model accounting for transients. Methods in Ecology and Evolution. https://doi.org/10.1111/2041-210X.14262)
+#
+# @details Note that m-arrays cannot hold the information about missing visits.
+#
+# @return A list with two m-arrays F and R:
 #	(k is number of temporal occasions)
 # F[i,t] ... i = 1..k; t = 1..k+1
 # 		F[i, t], for t = 1..k, is a number of animals first captured at occasion i next recaptured
@@ -61,16 +74,23 @@ marray <- function(CH) {
 #		R[i, t], for t = 1..k-1, is a number of animals second captured at occasion i and next recaptured
 #			at occasion t+1 (!)
 #
-# Note that m-arrays cannot handle different patterns in missing visits.
 
-marray_multistage <- function (CH, num.captures.first.year)
+marray_multistage <- function (CH, known.resid.first.cap = NULL)
 {
-	# input CH is without the transience trick
+	# input CH must be without the transience trick, i.e. extend_CH() not called yet
 	n.occasions <- ncol(CH)
-
+	
+	stopifnot(all(CH %in% c(0, 1)) && all(!is.na(CH))) # CH cannot contain NAs here, only 0s and 1s
+	
+	if (is.null(known.resid.first.cap)) # if this is not provided, it is as if no residency is confirmed (all 0s)
+		known.resid.first.cap <- rep(FALSE, nrow(CH))
+		
+	stopifnot(all(!is.na(known.resid.first.cap))) # this one also shouldn't contain NAs
+	stopifnot(nrow(known.resid.first.cap) == nrow(CH)) # not only the count, but the rows must directly correspond!
+	
 	# Transience trick (sometimes called extended capture histories): 
 	# Behind the first capture, insert a known residency status (num.captures.first.year > 1), or NA if not known
-	CH2 <- extend_CH(CH, num.captures.first.year) # output: CH2 - with the "transients trick" :)
+	CH2 <- extend_CH(CH, known.resid.first.cap) # output: CH2 - with the "transients trick" :)
 
 	# Following data preparation part comes from the code in BPA chapter 7.10.3 
 	CH.F <- CH2
@@ -114,10 +134,10 @@ marray_multistage <- function (CH, num.captures.first.year)
 	}
 	# Create m-array for these
 	CH.F.R.marray <- marray(CH.F.R2)
-	# The last column ought to show the number of first captured, not recaptured again
+	# The last column ought to show the number of the first captured (i.e. newly captured) and not recaptured again
 	# and should all be zeros, since all of them were recaptured
 	CH.F.R.marray[,ncol(CH.F)] <- 0
-	# Create the m-array for first captured (no juv., see the comment above) never recaptured and add it to the previous m-array
+	# Create the m-array for first captured never recaptured and add it to the previous m-array
 	CH.F.N.marray <- marray(CH.F.N)
 	CH.F.marray <- CH.F.R.marray + CH.F.N.marray
 
