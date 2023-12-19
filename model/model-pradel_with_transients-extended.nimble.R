@@ -1,8 +1,13 @@
 ##########################################################################################
 # Extension of the Pradel (1996) model accounting for transients (Telensky et al.)
 # This is an extended model variant, featuring:
-#	- multiple sites with potentially different temporal coverage (Extension 1 in the manuscript);
-#	- confirmation of residency status within the first capture occasion (Extension 2 in the manuscript).
+#	- multiple sites with potentially different temporal coverage (Model extension 1 in the manuscript);
+#	- confirmation of residency status within the first capture occasion (Model extension 2 in the manuscript).
+# 
+# Parametrization (this can be changed easily):
+# - demographic parameters: estimate for each time occasion
+# - capture probability and omega: constant over time, random site effects
+# - residence probability: temporal slope (linear on the logit scale)
 #
 # Model written in BUGS, fit in Nimble.
 #
@@ -11,10 +16,13 @@
 #	- fast_model_run - FALSE for full model run, TRUE for just very fast test
 # 	- run_parallel - TRUE/FALSE
 #
-# References: Telenský, T., Storch, D., Klvaňa, P., Reif, J. Extension of Pradel capture-recapture survival-recruitment model accounting for transients. Methods in Ecology and Evolution.
+# References: Telenský, T., Storch, D., Klvaňa, P., Reif, J. Extension of Pradel capture-recapture survival-recruitment model accounting for transients. Methods in Ecology and Evolution. https://doi.org/10.1111/2041-210X.14262
 
 require(nimble)
 require(coda)
+
+source("../code/functions/nimble-wrapper.R") # functions to run Nimble
+source("../code/functions/tools.R")
 
 code <- nimbleCode({
 #######################
@@ -203,5 +211,8 @@ cat("ni = ", ni, ", nt = ", nt, ", nb = ", nb, ", nc = ", nc, "\n")
 
 # Run the model in Nimble
 
+mstart(absolute_time = TRUE)
+
 out <- run_nimble(seed, code, bugs.data, bugs.constants, dimensions, inits, parameters, run_parallel = run_parallel, ni, nt, nb, nc)
 							  
+mstop(absolute_time = TRUE)
