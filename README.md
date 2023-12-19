@@ -1,11 +1,13 @@
 
-**Code and data from Telenský, T., Storch, D., Klvaňa, P., Reif, J. Extension of Pradel capture-recapture survival-recruitment model accounting for transients. Methods in Ecology and Evolution.**
+**Code and data from Telenský, T., Storch, D., Klvaňa, P., Reif, J. Extension of Pradel capture-recapture survival-recruitment model accounting for transients. Methods in Ecology and Evolution. https://doi.org/10.1111/2041-210X.14262**
 
 Implementations of basic as well extended model in BUGS language for both Nimble and JAGS, along with simple examples.
 
  - [code](/code) - R scripts to run the models using Nimble or JAGS
  - [data](/data) - the data from the Case study (Czech Constant Effort Sites scheme)
  - [model](/model) - basic and extended model in BUGS language
+ 
+The code is not complete yet - [updates are coming soon](COMING_UP.md). Stay tuned!
 
 Install instructions
 
